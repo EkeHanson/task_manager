@@ -1,10 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = 'https://server1.prolianceltd.com';
-
-
-
-
+const API_BASE =  'https://server1.prolianceltd.com/api/project-manager/api';
 
 const instance = axios.create({
   baseURL: API_BASE,
