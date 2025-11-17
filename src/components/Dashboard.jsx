@@ -253,7 +253,7 @@ const StatCard = ({ title, value, icon, gradient, bgGradient }) => {
 
 // Task List Component
 const TaskList = ({ tasks, onTaskSelect, selectedTask, onTaskUpdate, onTasksChange, currentUser }) => {
-  const [filter, setFilter] = useState('my_created');
+  const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('created_at');
 

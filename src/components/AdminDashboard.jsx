@@ -28,7 +28,7 @@ import { StatCard, TaskStatusChart, RecentActivity } from './StatCard';
 import Pagination from './Pagination';
 
 const AdminDashboard = ({ user, onLogout }) => {
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('tasks');
   const [tasks, setTasks] = useState([]);
   const [users, setUsers] = useState([]);
   const [reports, setReports] = useState([]);
