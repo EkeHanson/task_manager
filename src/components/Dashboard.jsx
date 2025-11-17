@@ -38,8 +38,9 @@ const Dashboard = ({ user, onLogout }) => {
     try {
       setLoading(true);
       const response = await taskAPI.getMyTasks();
-      setTasks(response.data);
-      calculateStats(response.data);
+      const tasksData = response.data.results || response.data;
+      setTasks(tasksData);
+      calculateStats(tasksData);
     } catch (error) {
       console.error('Error loading tasks:', error);
     } finally {
@@ -268,7 +269,7 @@ const TaskList = ({ tasks, onTaskSelect, selectedTask, onTaskUpdate, onTasksChan
       const response = await taskAPI.getMyTasks();
 
       // For now, implement client-side pagination since my_tasks doesn't support query params
-      let filteredTasks = response.data;
+      let filteredTasks = response.data.results || response.data;
 
       // Apply filters
       if (statusFilter !== 'all') {
