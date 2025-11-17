@@ -28,6 +28,14 @@
  import authAPI from '../api/auth';
  import { StatCard, TaskStatusChart, RecentActivity } from './StatCard';
  import Pagination from './Pagination';
+ 
+ // Utility function to strip HTML tags
+ const stripHtml = (html) => {
+   if (!html) return '';
+   const tmp = document.createElement('DIV');
+   tmp.innerHTML = html;
+   return tmp.textContent || tmp.innerText || '';
+ };
 
 const AdminDashboard = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState('tasks');
@@ -862,7 +870,7 @@ const TaskTableRow = ({ task, users, onUpdate, onEdit, onReassign, onView, onSel
       <td className="px-6 py-4">
         <div>
           <div className="font-medium text-slate-900">{task.title}</div>
-          <div className="text-sm text-slate-500 line-clamp-1">{task.description}</div>
+          <div className="text-sm text-slate-500 line-clamp-1">{stripHtml(task.description)}</div>
         </div>
       </td>
       <td className="px-6 py-4">
@@ -1031,13 +1039,24 @@ const EditTaskModal = ({ task, users, user, onClose, onTaskUpdated }) => {
 
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">Description</label>
-            <ReactQuill
-              theme="snow"
-              value={formData.description}
-              onChange={(value) => setFormData({...formData, description: value})}
-              placeholder="Describe the task..."
-              className="bg-white"
-            />
+            <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+              <ReactQuill
+                theme="snow"
+                value={formData.description}
+                onChange={(value) => setFormData({...formData, description: value})}
+                placeholder="Describe the task..."
+                style={{ minHeight: '120px' }}
+                modules={{
+                  toolbar: [
+                    [{ 'header': [1, 2, false] }],
+                    ['bold', 'italic', 'underline'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['link'],
+                    ['clean']
+                  ],
+                }}
+              />
+            </div>
           </div>
 
           <div>
@@ -1395,13 +1414,24 @@ useEffect(() => {
 
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">Description</label>
-            <ReactQuill
-              theme="snow"
-              value={formData.description}
-              onChange={(value) => setFormData({...formData, description: value})}
-              placeholder="Describe the task..."
-              className="bg-white"
-            />
+            <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+              <ReactQuill
+                theme="snow"
+                value={formData.description}
+                onChange={(value) => setFormData({...formData, description: value})}
+                placeholder="Describe the task..."
+                style={{ minHeight: '120px' }}
+                modules={{
+                  toolbar: [
+                    [{ 'header': [1, 2, false] }],
+                    ['bold', 'italic', 'underline'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['link'],
+                    ['clean']
+                  ],
+                }}
+              />
+            </div>
           </div>
 
           <div>
@@ -1562,9 +1592,14 @@ const TaskDetailsModal = ({ task, users, onClose }) => {
               {/* Description */}
               <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
                 <h3 className="text-lg font-semibold text-slate-900 mb-4">Description</h3>
-                <p className="text-slate-700 leading-relaxed">
-                  {task.description || 'No description provided.'}
-                </p>
+                {task.description ? (
+                  <div
+                    className="text-slate-700 leading-relaxed prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ __html: task.description }}
+                  />
+                ) : (
+                  <p className="text-slate-700 leading-relaxed italic">No description provided.</p>
+                )}
               </div>
 
               {/* Progress */}
@@ -2103,7 +2138,7 @@ const UserAnalyticsTab = ({ userAnalytics, tasks, users }) => {
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <h4 className="font-semibold text-slate-900 mb-2">{task.title}</h4>
-                          <p className="text-sm text-slate-600 mb-3 line-clamp-2">{task.description}</p>
+                          <p className="text-sm text-slate-600 mb-3 line-clamp-2">{stripHtml(task.description)}</p>
                           <div className="flex items-center gap-4 text-xs text-slate-500">
                             <span>Status: <span className="font-medium text-slate-900">{task.status.replace('_', ' ')}</span></span>
                             <span>Priority: <span className="font-medium text-slate-900">{task.priority}</span></span>

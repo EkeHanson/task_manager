@@ -6,6 +6,14 @@ import { taskAPI } from '../api/tasks';
 import authAPI from '../api/auth';
 import Pagination from './Pagination';
 
+// Utility function to strip HTML tags
+const stripHtml = (html) => {
+  if (!html) return '';
+  const tmp = document.createElement('DIV');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
+};
+
 // Dashboard Component
 const Dashboard = ({ user, onLogout }) => {
   const [tasks, setTasks] = useState([]);
@@ -524,7 +532,7 @@ const TaskCard = ({ task, isSelected, onSelect }) => {
           </div>
 
           {task.description && (
-            <p className="text-sm text-slate-600 line-clamp-2 mb-3">{task.description}</p>
+            <p className="text-sm text-slate-600 line-clamp-2 mb-3">{stripHtml(task.description)}</p>
           )}
 
           {task.progress_percentage > 0 && (
@@ -615,6 +623,15 @@ const TaskDetail = ({ task, currentUser, onTaskUpdate, onEditTask, onClose }) =>
     }
   };
 
+  const handleMarkCompleted = async () => {
+    try {
+      await taskAPI.updateTask(task.id, { status: 'completed', progress_percentage: 100 });
+      onTaskUpdate();
+    } catch (error) {
+      console.error('Error marking task as completed:', error);
+    }
+  };
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm lg:sticky lg:top-24 overflow-hidden">
       {/* Header */}
@@ -636,6 +653,15 @@ const TaskDetail = ({ task, currentUser, onTaskUpdate, onEditTask, onClose }) =>
             <Plus className="w-4 h-4" />
             Add Daily Report
           </button>
+          {task.status !== 'completed' && task.assigned_to_id === currentUser.id && (
+            <button
+              onClick={handleMarkCompleted}
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all font-medium text-sm"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              Mark Completed
+            </button>
+          )}
           {task.assigned_by_id === currentUser.id && (
             <button
               onClick={() => onEditTask(task)}
@@ -673,7 +699,7 @@ const TaskDetail = ({ task, currentUser, onTaskUpdate, onEditTask, onClose }) =>
           <div className="space-y-4">
             <div>
               <h3 className="text-sm font-semibold text-slate-900 mb-2">Description</h3>
-              <p className="text-sm text-slate-600 whitespace-pre-wrap">{task.description}</p>
+              <div className="text-sm text-slate-600 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: task.description || '' }} />
             </div>
 
             <div>
