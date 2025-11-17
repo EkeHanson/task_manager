@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import authAPI from '../api/auth';
 
 const Login = ({ onLogin }) => {
-  const [email, setEmail] = useState('support@appbrew.com');
+  const [identifier, setIdentifier] = useState('support@appbrew.com');
   const [password, setPassword] = useState('qwerty');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -13,7 +13,7 @@ const Login = ({ onLogin }) => {
     setError('');
 
     try {
-      const response = await authAPI.login(email, password);
+      const response = await authAPI.login(identifier, password);
 
       // Handle auth service response format
       let token, user;
@@ -70,14 +70,14 @@ const Login = ({ onLogin }) => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-semibold text-slate-900 mb-2">Email</label>
+            <label className="block text-sm font-semibold text-slate-900 mb-2">Email or Username</label>
             <input
-              type="email"
+              type="text"
               className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
               required
-              placeholder="Enter your email"
+              placeholder="Enter your email or username"
             />
           </div>
 
@@ -111,7 +111,7 @@ const Login = ({ onLogin }) => {
 
         <div className="mt-6 text-center">
           <p className="text-sm text-slate-500">
-            Demo credentials: support@appbrew.com / qwerty
+            Demo credentials: support@appbrew.com or username / qwerty
           </p>
         </div>
       </div>

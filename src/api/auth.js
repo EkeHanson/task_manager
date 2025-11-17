@@ -3,9 +3,10 @@ import api from './axios';
 const AUTH_BASE = 'https://server1.prolianceltd.com/api';
 
 const authAPI = {
-  login: (email, password) => {
+  login: (identifier, password) => {
+    const isEmail = identifier.includes('@');
     return api.post(`${AUTH_BASE}/token/`, {
-      email,
+      [isEmail ? 'email' : 'username']: identifier,
       password
     });
   },
