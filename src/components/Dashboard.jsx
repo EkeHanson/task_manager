@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, Filter, Calendar, Clock, TrendingUp, CheckCircle2, AlertCircle, PlayCircle, X, Send, BarChart3, MessageSquare, FileText, Edit, LogOut } from 'lucide-react';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import { taskAPI } from '../api/tasks';
 import authAPI from '../api/auth';
 import Pagination from './Pagination';
@@ -1140,13 +1142,12 @@ const CreateTaskModal = ({ onClose, onTaskCreated }) => {
 
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">Description</label>
-            <textarea
-              name="description"
-              className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            <ReactQuill
+              theme="snow"
               value={formData.description}
-              onChange={handleChange}
+              onChange={(value) => setFormData({...formData, description: value})}
               placeholder="Describe the task..."
-              rows="3"
+              className="bg-white"
             />
           </div>
 
@@ -1361,13 +1362,12 @@ const EditTaskModal = ({ task, currentUser, onClose, onTaskUpdated }) => {
 
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">Description</label>
-            <textarea
-              name="description"
-              className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            <ReactQuill
+              theme="snow"
               value={formData.description}
-              onChange={handleChange}
+              onChange={(value) => setFormData({...formData, description: value})}
               placeholder="Describe the task..."
-              rows="3"
+              className="bg-white"
             />
           </div>
 
