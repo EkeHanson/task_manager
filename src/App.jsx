@@ -64,7 +64,7 @@ function App() {
   // Render Admin Dashboard for admin users, regular dashboard for others
   return (
     <div className="App">
-      {user?.role === 'admin' || user?.role === 'co-admin' ? (
+      {user?.role === 'admin' ? (
         <AdminDashboard user={user} onLogout={handleLogout} />
       ) : (
         <Dashboard user={user} onLogout={handleLogout} />
