@@ -49,12 +49,14 @@ const Dashboard = ({ user, onLogout }) => {
   };
 
   const calculateStats = (tasks) => {
+    // Filter to show only tasks created by the current user
+    const userTasks = tasks.filter(task => task.assigned_by_id === currentUser.id);
     const today = new Date();
     const stats = {
-      total: tasks.length,
-      completed: tasks.filter(task => task.status === 'completed').length,
-      inProgress: tasks.filter(task => task.status === 'in_progress').length,
-      overdue: tasks.filter(task => {
+      total: userTasks.length,
+      completed: userTasks.filter(task => task.status === 'completed').length,
+      inProgress: userTasks.filter(task => task.status === 'in_progress').length,
+      overdue: userTasks.filter(task => {
         if (!task.due_date || task.status === 'completed') return false;
         return new Date(task.due_date) < today;
       }).length
@@ -251,7 +253,7 @@ const StatCard = ({ title, value, icon, gradient, bgGradient }) => {
 
 // Task List Component
 const TaskList = ({ tasks, onTaskSelect, selectedTask, onTaskUpdate, onTasksChange, currentUser }) => {
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState('my_created');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('created_at');
 
