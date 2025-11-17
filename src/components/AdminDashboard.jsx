@@ -695,7 +695,21 @@ const TaskManagementTab = ({ tasks, users, user, onUpdate, onShowConfirm }) => {
                   key={task.id}
                   task={task}
                   users={users}
-                  onUpdate={() => loadTasks()}
+                  onUpdate={() => {
+                    // Reload tasks after update
+                    const reloadTasks = async () => {
+                      try {
+                        const response = await taskAPI.getAllTasks();
+                        const tasksData = response.data.results || response.data || [];
+                        setTasks(tasksData);
+                        // Re-apply current filters
+                        applyFilters(tasksData, filter, dateFilter, searchTerm, currentPage);
+                      } catch (error) {
+                        console.error('Error reloading tasks:', error);
+                      }
+                    };
+                    reloadTasks();
+                  }}
                   onView={(task) => {
                     setTaskToView(task);
                     setShowDetailsModal(true);

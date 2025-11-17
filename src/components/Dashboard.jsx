@@ -442,7 +442,21 @@ const TaskList = ({ tasks, onTaskSelect, selectedTask, onTaskUpdate, onTasksChan
               task={task}
               isSelected={selectedTask?.id === task.id}
               onSelect={() => onTaskSelect(task)}
-              onUpdate={onTaskUpdate}
+              onUpdate={() => {
+                // Reload tasks after update
+                const reloadTasks = async () => {
+                  try {
+                    const response = await taskAPI.getAllTasks();
+                    const tasksData = response.data.results || response.data;
+                    setTasks(tasksData);
+                    // Re-apply current filters
+                    applyFilters(tasksData, filter, searchTerm, currentPage);
+                  } catch (error) {
+                    console.error('Error reloading tasks:', error);
+                  }
+                };
+                reloadTasks();
+              }}
             />
           ))
         )}
