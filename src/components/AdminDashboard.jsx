@@ -804,21 +804,18 @@ const TaskTableRow = ({ task, users, onUpdate, onEdit, onReassign, onView, onSel
   };
 
   const handleDelete = () => {
-    onShowConfirm({
-      title: 'Delete Task',
-      message: `Are you sure you want to delete the task "${task.title}"? This action cannot be undone.`,
-      type: 'danger',
-      confirmText: 'Delete Task',
-      cancelText: 'Cancel',
-      onConfirm: async () => {
+    const confirmed = window.confirm(`Are you sure you want to delete the task "${task.title}"? This action cannot be undone.`);
+    if (confirmed) {
+      (async () => {
         try {
           await taskAPI.deleteTask(task.id);
           onUpdate();
         } catch (error) {
           console.error('Error deleting task:', error);
+          alert('Failed to delete task. Please try again.');
         }
-      }
-    });
+      })();
+    }
   };
 
   return (
