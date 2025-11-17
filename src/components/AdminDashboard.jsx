@@ -1675,7 +1675,10 @@ const TaskDetailsModal = ({ task, users, onClose }) => {
                     <div>
                       <label className="block text-sm font-medium text-slate-500 mb-1">Days Remaining</label>
                       <span className={`text-sm font-medium ${Math.ceil((new Date(task.due_date) - new Date()) / (1000 * 60 * 60 * 24)) < 0 ? 'text-red-600' : 'text-slate-900'}`}>
-                        {Math.ceil((new Date(task.due_date) - new Date()) / (1000 * 60 * 60 * 24))} days
+                        {(() => {
+                          const days = Math.ceil((new Date(task.due_date) - new Date()) / (1000 * 60 * 60 * 24));
+                          return `${days} day${days !== 1 ? 's' : ''}`;
+                        })()}
                       </span>
                     </div>
                   )}
