@@ -50,7 +50,7 @@ const Dashboard = ({ user, onLogout }) => {
 
   const calculateStats = (tasks) => {
     // Filter to show only tasks created by the current user
-    const userTasks = tasks.filter(task => task.assigned_by_id === currentUser.id);
+    const userTasks = tasks.filter(task => String(task.assigned_by_id) === String(currentUser.id));
     const today = new Date();
     const stats = {
       total: userTasks.length,
@@ -276,7 +276,7 @@ const TaskList = ({ tasks, onTaskSelect, selectedTask, onTaskUpdate, onTasksChan
       // Apply filters
       if (statusFilter !== 'all') {
         if (statusFilter === 'my_created') {
-          filteredTasks = filteredTasks.filter(task => task.assigned_by_id === currentUser.id);
+          filteredTasks = filteredTasks.filter(task => String(task.assigned_by_id) === String(currentUser.id));
         } else {
           filteredTasks = filteredTasks.filter(task => task.status === statusFilter);
         }
@@ -337,7 +337,7 @@ const TaskList = ({ tasks, onTaskSelect, selectedTask, onTaskUpdate, onTasksChan
 
   const statusCounts = {
     all: tasks.length,
-    my_created: tasks.filter(t => t.assigned_by_id === currentUser.id).length,
+    my_created: tasks.filter(t => String(t.assigned_by_id) === String(currentUser.id)).length,
     not_started: tasks.filter(t => t.status === 'not_started').length,
     in_progress: tasks.filter(t => t.status === 'in_progress').length,
     completed: tasks.filter(t => t.status === 'completed').length,
