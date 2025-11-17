@@ -264,50 +264,25 @@ const TaskList = ({ tasks, onTaskSelect, selectedTask, onTaskUpdate, onTasksChan
   const [paginatedTasks, setPaginatedTasks] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Load paginated tasks
-  const loadTasks = async (page = 1, statusFilter = filter, search = searchTerm) => {
+  // Load all tasks (no filtering on server)
+  const loadTasks = async () => {
     setLoading(true);
     try {
       const response = await taskAPI.getAllTasks();
 
-      // Implement client-side filtering and pagination
-      let filteredTasks = response.data.results || response.data;
-
-      // Apply filters
-      if (statusFilter !== 'all') {
-        if (statusFilter === 'my_created') {
-          filteredTasks = filteredTasks.filter(task => task.assigned_by_email === currentUser.email);
-        } else {
-          filteredTasks = filteredTasks.filter(task => task.status === statusFilter);
-        }
+      // Handle response - get all results
+      let allTasks = [];
+      if (response.data.results) {
+        allTasks = response.data.results;
+      } else {
+        allTasks = response.data;
       }
 
-      // Apply search
-      if (search.trim()) {
-        filteredTasks = filteredTasks.filter(task =>
-          task.title.toLowerCase().includes(search.trim().toLowerCase()) ||
-          task.description.toLowerCase().includes(search.trim().toLowerCase())
-        );
-      }
-
-      // Update parent state
-      onTasksChange(filteredTasks);
-
-      // Calculate pagination
-      const pageSize = 20;
-      const totalItems = filteredTasks.length;
-      const totalPages = Math.ceil(totalItems / pageSize);
-      const startIndex = (page - 1) * pageSize;
-      const endIndex = startIndex + pageSize;
-      const paginatedItems = filteredTasks.slice(startIndex, endIndex);
-
-      setPaginatedTasks(paginatedItems);
-      setTotalItems(totalItems);
-      setTotalPages(totalPages);
-      setCurrentPage(page);
-
+      setTasks(allTasks);
+      applyFilters(allTasks, filter, searchTerm, 1);
     } catch (error) {
       console.error('Error loading tasks:', error);
+      setTasks([]);
       setPaginatedTasks([]);
       setTotalItems(0);
       setTotalPages(1);
@@ -316,13 +291,58 @@ const TaskList = ({ tasks, onTaskSelect, selectedTask, onTaskUpdate, onTasksChan
     }
   };
 
-  // Load tasks on mount and when filters change
+  // Apply client-side filtering and pagination
+  const applyFilters = (allTasks, statusFilter, search, page = 1) => {
+    let filteredTasks = [...allTasks];
+
+    // Apply status filtering
+    if (statusFilter !== 'all') {
+      if (statusFilter === 'my_created') {
+        filteredTasks = filteredTasks.filter(task => task.assigned_by_email === currentUser.email);
+      } else {
+        filteredTasks = filteredTasks.filter(task => task.status === statusFilter);
+      }
+    }
+
+    // Apply search filtering
+    if (search.trim()) {
+      filteredTasks = filteredTasks.filter(task =>
+        task.title.toLowerCase().includes(search.trim().toLowerCase()) ||
+        task.description.toLowerCase().includes(search.trim().toLowerCase())
+      );
+    }
+
+    // Update parent state
+    onTasksChange(filteredTasks);
+
+    // Calculate pagination
+    const pageSize = 20;
+    const totalItems = filteredTasks.length;
+    const totalPages = Math.ceil(totalItems / pageSize);
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const paginatedItems = filteredTasks.slice(startIndex, endIndex);
+
+    setPaginatedTasks(paginatedItems);
+    setTotalItems(totalItems);
+    setTotalPages(totalPages);
+    setCurrentPage(page);
+  };
+
+  // Load tasks on mount
   useEffect(() => {
-    loadTasks(1, filter, searchTerm);
-  }, [filter, searchTerm]);
+    loadTasks();
+  }, []);
+
+  // Apply filters when they change
+  useEffect(() => {
+    if (tasks.length > 0) {
+      applyFilters(tasks, filter, searchTerm, 1);
+    }
+  }, [filter, searchTerm, tasks]);
 
   const handlePageChange = (page) => {
-    loadTasks(page, filter, searchTerm);
+    applyFilters(tasks, filter, searchTerm, page);
   };
 
   const handleFilterChange = (newFilter) => {

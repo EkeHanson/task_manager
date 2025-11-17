@@ -22,10 +22,12 @@
    FileSpreadsheet
  } from 'lucide-react';
  import * as XLSX from 'xlsx';
-import { taskAPI } from '../api/tasks';
-import authAPI from '../api/auth';
-import { StatCard, TaskStatusChart, RecentActivity } from './StatCard';
-import Pagination from './Pagination';
+ import ReactQuill from 'react-quill';
+ import 'react-quill/dist/quill.snow.css';
+ import { taskAPI } from '../api/tasks';
+ import authAPI from '../api/auth';
+ import { StatCard, TaskStatusChart, RecentActivity } from './StatCard';
+ import Pagination from './Pagination';
 
 const AdminDashboard = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState('tasks');
@@ -456,65 +458,25 @@ const TaskManagementTab = ({ tasks, users, user, onUpdate, onShowConfirm }) => {
     }
   };
 
-  // Load paginated tasks
-  const loadTasks = async (page = 1, statusFilter = filter, dateFilterType = dateFilter, search = searchTerm) => {
+  // Load all tasks (no filtering on server)
+  const loadTasks = async () => {
     setLoading(true);
     try {
-      const params = { page };
+      const response = await taskAPI.getAllTasks();
 
-      // Only send status parameter for actual status values, not for 'all' or 'unassigned'
-      if (statusFilter !== 'all' && statusFilter !== 'unassigned') {
-        params.status = statusFilter;
-      }
-
-      if (search.trim()) {
-        // Note: Backend might need to support search parameter
-        params.search = search.trim();
-      }
-
-      const response = await taskAPI.getAllTasks(params);
-
-      // Handle paginated response
-      let tasksData = [];
+      // Handle paginated response - get all results
+      let allTasks = [];
       if (response.data.results) {
-        tasksData = response.data.results;
-        setTotalItems(response.data.count || 0);
-        setTotalPages(Math.ceil((response.data.count || 0) / 20)); // Assuming page_size = 20
+        allTasks = response.data.results;
       } else {
-        // Fallback for non-paginated response
-        tasksData = response.data;
-        setTotalItems(response.data.length);
-        setTotalPages(1);
+        allTasks = response.data;
       }
 
-      // Apply client-side filtering for status and assignment
-      if (statusFilter === 'unassigned') {
-        tasksData = tasksData.filter(task => !task.assigned_to_id || task.assigned_to_id === '');
-      } else if (statusFilter !== 'all') {
-        // Apply client-side status filtering as backup to backend filtering
-        tasksData = tasksData.filter(task => task.status === statusFilter);
-      }
-
-      // Apply client-side date filtering
-      if (dateFilterType !== 'all') {
-        const dateRange = getDateRange(dateFilterType);
-        tasksData = tasksData.filter(task => {
-          if (!task.due_date) return false;
-
-          const taskDueDate = new Date(task.due_date);
-
-          if (dateFilterType === 'overdue') {
-            return taskDueDate < dateRange.end && task.status !== 'completed';
-          } else {
-            return taskDueDate >= dateRange.start && taskDueDate <= dateRange.end;
-          }
-        });
-      }
-
-      setPaginatedTasks(tasksData);
-      setCurrentPage(page);
+      setTasks(allTasks);
+      applyFilters(allTasks, filter, dateFilter, searchTerm, 1);
     } catch (error) {
       console.error('Error loading tasks:', error);
+      setTasks([]);
       setPaginatedTasks([]);
       setTotalItems(0);
       setTotalPages(1);
@@ -523,13 +485,69 @@ const TaskManagementTab = ({ tasks, users, user, onUpdate, onShowConfirm }) => {
     }
   };
 
-  // Load tasks on mount and when filters change
+  // Apply client-side filtering and pagination
+  const applyFilters = (allTasks, statusFilter, dateFilterType, search, page = 1) => {
+    let filteredTasks = [...allTasks];
+
+    // Apply status filtering
+    if (statusFilter === 'unassigned') {
+      filteredTasks = filteredTasks.filter(task => !task.assigned_to_id || task.assigned_to_id === '');
+    } else if (statusFilter !== 'all') {
+      filteredTasks = filteredTasks.filter(task => task.status === statusFilter);
+    }
+
+    // Apply date filtering
+    if (dateFilterType !== 'all') {
+      const dateRange = getDateRange(dateFilterType);
+      filteredTasks = filteredTasks.filter(task => {
+        if (!task.due_date) return false;
+
+        const taskDueDate = new Date(task.due_date);
+
+        if (dateFilterType === 'overdue') {
+          return taskDueDate < dateRange.end && task.status !== 'completed';
+        } else {
+          return taskDueDate >= dateRange.start && taskDueDate <= dateRange.end;
+        }
+      });
+    }
+
+    // Apply search filtering
+    if (search.trim()) {
+      filteredTasks = filteredTasks.filter(task =>
+        task.title.toLowerCase().includes(search.trim().toLowerCase()) ||
+        task.description.toLowerCase().includes(search.trim().toLowerCase())
+      );
+    }
+
+    // Calculate pagination
+    const pageSize = 20;
+    const totalItems = filteredTasks.length;
+    const totalPages = Math.ceil(totalItems / pageSize);
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const paginatedItems = filteredTasks.slice(startIndex, endIndex);
+
+    setPaginatedTasks(paginatedItems);
+    setTotalItems(totalItems);
+    setTotalPages(totalPages);
+    setCurrentPage(page);
+  };
+
+  // Load tasks on mount
   useEffect(() => {
-    loadTasks(1, filter, dateFilter, searchTerm);
-  }, [filter, dateFilter, searchTerm]);
+    loadTasks();
+  }, []);
+
+  // Apply filters when they change
+  useEffect(() => {
+    if (tasks.length > 0) {
+      applyFilters(tasks, filter, dateFilter, searchTerm, 1);
+    }
+  }, [filter, dateFilter, searchTerm, tasks]);
 
   const handlePageChange = (page) => {
-    loadTasks(page, filter, dateFilter, searchTerm);
+    applyFilters(tasks, filter, dateFilter, searchTerm, page);
   };
 
   const handleFilterChange = (newFilter) => {
@@ -677,7 +695,7 @@ const TaskManagementTab = ({ tasks, users, user, onUpdate, onShowConfirm }) => {
                   key={task.id}
                   task={task}
                   users={users}
-                  onUpdate={() => loadTasks(currentPage, filter, searchTerm)}
+                  onUpdate={() => loadTasks()}
                   onView={(task) => {
                     setTaskToView(task);
                     setShowDetailsModal(true);
@@ -999,13 +1017,12 @@ const EditTaskModal = ({ task, users, user, onClose, onTaskUpdated }) => {
 
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">Description</label>
-            <textarea
-              name="description"
-              className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            <ReactQuill
+              theme="snow"
               value={formData.description}
-              onChange={handleChange}
+              onChange={(value) => setFormData({...formData, description: value})}
               placeholder="Describe the task..."
-              rows="3"
+              className="bg-white"
             />
           </div>
 
@@ -1364,13 +1381,12 @@ useEffect(() => {
 
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">Description</label>
-            <textarea
-              name="description"
-              className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            <ReactQuill
+              theme="snow"
               value={formData.description}
-              onChange={handleChange}
+              onChange={(value) => setFormData({...formData, description: value})}
               placeholder="Describe the task..."
-              rows="3"
+              className="bg-white"
             />
           </div>
 
