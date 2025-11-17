@@ -653,7 +653,7 @@ const TaskDetail = ({ task, currentUser, onTaskUpdate, onEditTask, onClose }) =>
             <Plus className="w-4 h-4" />
             Add Daily Report
           </button>
-          {task.status !== 'completed' && task.assigned_to_id === currentUser.id && (
+          {task.status !== 'completed' && task.assigned_to_email === currentUser.email && (
             <button
               onClick={handleMarkCompleted}
               className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all font-medium text-sm"
@@ -716,7 +716,7 @@ const TaskDetail = ({ task, currentUser, onTaskUpdate, onEditTask, onClose }) =>
                 </div>
 
                 {/* Progress Slider - Only show if user can edit */}
-                {task.assigned_to_id === currentUser.id && (
+                {task.assigned_to_email === currentUser.email && (
                   <div className="space-y-2">
                     <label className="text-xs font-medium text-slate-600">Update Progress</label>
                     <input
