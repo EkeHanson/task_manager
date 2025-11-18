@@ -266,6 +266,7 @@ const TaskList = ({ tasks, onTaskSelect, selectedTask, onTaskUpdate, onTasksChan
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('created_at');
+  const [filterCounts, setFilterCounts] = useState({});
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -322,8 +323,6 @@ const TaskList = ({ tasks, onTaskSelect, selectedTask, onTaskUpdate, onTasksChan
       );
     }
 
-    // Update parent state
-    onTasksChange(filteredTasks);
 
     // Calculate pagination
     const pageSize = 20;
@@ -344,9 +343,20 @@ const TaskList = ({ tasks, onTaskSelect, selectedTask, onTaskUpdate, onTasksChan
     loadTasks();
   }, []);
 
-  // Apply filters when they change
+  // Calculate filter counts and apply filters when they change
   useEffect(() => {
     if (tasks.length > 0) {
+      // Calculate filter counts from full dataset
+      const counts = {
+        all: tasks.length,
+        my_created: tasks.filter(t => t.assigned_by_email === currentUser.email).length,
+        not_started: tasks.filter(t => t.status === 'not_started').length,
+        in_progress: tasks.filter(t => t.status === 'in_progress').length,
+        completed: tasks.filter(t => t.status === 'completed').length,
+        blocked: tasks.filter(t => t.status === 'blocked').length,
+      };
+      setFilterCounts(counts);
+
       applyFilters(tasks, filter, searchTerm, 1);
     }
   }, [filter, searchTerm, tasks]);
@@ -365,14 +375,6 @@ const TaskList = ({ tasks, onTaskSelect, selectedTask, onTaskUpdate, onTasksChan
     setCurrentPage(1);
   };
 
-  const statusCounts = {
-    all: tasks.length,
-    my_created: tasks.filter(t => t.assigned_by_email === currentUser.email).length,
-    not_started: tasks.filter(t => t.status === 'not_started').length,
-    in_progress: tasks.filter(t => t.status === 'in_progress').length,
-    completed: tasks.filter(t => t.status === 'completed').length,
-    blocked: tasks.filter(t => t.status === 'blocked').length,
-  };
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -399,13 +401,13 @@ const TaskList = ({ tasks, onTaskSelect, selectedTask, onTaskUpdate, onTasksChan
         {/* Status Filters */}
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
           {[
-            { key: 'all', label: 'All', count: statusCounts.all },
-            { key: 'my_created', label: 'My Created', count: statusCounts.my_created },
-            { key: 'not_started', label: 'Not Started', count: statusCounts.not_started },
-            { key: 'in_progress', label: 'In Progress', count: statusCounts.in_progress },
-            { key: 'completed', label: 'Completed', count: statusCounts.completed },
-            { key: 'blocked', label: 'Blocked', count: statusCounts.blocked },
-          ].map(({ key, label, count }) => (
+            { key: 'all', label: 'All' },
+            { key: 'my_created', label: 'My Created' },
+            { key: 'not_started', label: 'Not Started' },
+            { key: 'in_progress', label: 'In Progress' },
+            { key: 'completed', label: 'Completed' },
+            { key: 'blocked', label: 'Blocked' },
+          ].map(({ key, label }) => (
             <button
               key={key}
               onClick={() => handleFilterChange(key)}
@@ -419,7 +421,7 @@ const TaskList = ({ tasks, onTaskSelect, selectedTask, onTaskUpdate, onTasksChan
               <span className={`px-1.5 py-0.5 rounded-full text-xs ${
                 filter === key ? 'bg-white/20' : 'bg-white'
               }`}>
-                {count}
+                {filterCounts[key] || 0}
               </span>
             </button>
           ))}
@@ -662,7 +664,7 @@ const TaskDetail = ({ task, currentUser, onTaskUpdate, onEditTask, onClose }) =>
               Mark Completed
             </button>
           )}
-          {task.assigned_by_id === currentUser.id && (
+          {task.assigned_by_email === currentUser.email && (
             <button
               onClick={() => onEditTask(task)}
               className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-all font-medium text-sm"
@@ -715,7 +717,7 @@ const TaskDetail = ({ task, currentUser, onTaskUpdate, onEditTask, onClose }) =>
                   <span className="text-sm font-semibold text-slate-900">{task.progress_percentage}%</span>
                 </div>
 
-                {/* Progress Slider - Only show if user can edit */}
+                {/* Progress Slider - Only show if user can edit
                 {task.assigned_to_email === currentUser.email && (
                   <div className="space-y-2">
                     <label className="text-xs font-medium text-slate-600">Update Progress</label>
@@ -740,7 +742,7 @@ const TaskDetail = ({ task, currentUser, onTaskUpdate, onEditTask, onClose }) =>
                       </div>
                     )}
                   </div>
-                )}
+                )} */}
               </div>
             </div>
 
@@ -956,6 +958,21 @@ const DailyReportForm = ({ task, onClose, onReportAdded }) => {
       [name]: value
     });
 
+    // Update due date min when start date changes
+    if (name === 'start_date' && value) {
+      const dueDateInput = document.querySelector('input[name="due_date"]');
+      if (dueDateInput) {
+        dueDateInput.min = value;
+        // If current due date is before new start date, clear it
+        if (formData.due_date && new Date(formData.due_date) <= new Date(value)) {
+          setFormData(prev => ({
+            ...prev,
+            due_date: ''
+          }));
+        }
+      }
+    }
+
     // Recalculate days when dates change
     if (name === 'start_date' || name === 'due_date') {
       const newStartDate = name === 'start_date' ? value : formData.start_date;
@@ -1079,7 +1096,8 @@ const CreateTaskModal = ({ onClose, onTaskCreated }) => {
     start_date: '',
     due_date: '',
     priority: 'medium',
-    status: 'not_started'
+    status: 'not_started',
+    progress_percentage: 0
   });
   const [loading, setLoading] = useState(false);
   const [calculatedDays, setCalculatedDays] = useState(null);
@@ -1136,10 +1154,60 @@ const CreateTaskModal = ({ onClose, onTaskCreated }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate dates
+    if (formData.start_date && formData.due_date) {
+      const startDate = new Date(formData.start_date);
+      const dueDate = new Date(formData.due_date);
+      if (dueDate <= startDate) {
+        alert('Due date must be after the start date.');
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
-      await taskAPI.createTask(formData);
+      // Create task data without assignment first
+      const { assigned_to_id, ...createData } = formData;
+
+      // Create the task
+      const createResponse = await taskAPI.createTask(createData);
+      const newTask = createResponse.data;
+
+      // If assigned_to_id is set, update the task with assignment
+      if (assigned_to_id) {
+        const assignedUser = users.find(user => user.id == assigned_to_id);
+        if (assignedUser) {
+          const updateData = {
+            title: newTask.title,
+            assigned_to_id: assigned_to_id,
+            assigned_to_username: assignedUser.username || '',
+            assigned_to_first_name: assignedUser.first_name || '',
+            assigned_to_last_name: assignedUser.last_name || '',
+            assigned_to_email: assignedUser.email || '',
+            assigned_to_role: assignedUser.role || '',
+            assigned_to_job_role: assignedUser.job_role || '',
+            assigned_to_tenant: assignedUser.tenant || '',
+            assigned_to_branch: assignedUser.branch || '',
+            assigned_to_status: assignedUser.status || '',
+            assigned_to_permission_levels: assignedUser.permission_levels || [],
+            assigned_by_id: newTask.assigned_by_id,
+            assigned_by_first_name: newTask.assigned_by_first_name,
+            assigned_by_last_name: newTask.assigned_by_last_name,
+            assigned_by_email: newTask.assigned_by_email,
+            description: newTask.description,
+            start_date: newTask.start_date,
+            due_date: newTask.due_date,
+            priority: newTask.priority,
+            status: newTask.status,
+            progress_percentage: newTask.progress_percentage
+          };
+
+          await taskAPI.updateTask(newTask.id, updateData);
+        }
+      }
+
       onTaskCreated();
     } catch (error) {
       console.error('Error creating task:', error);
@@ -1192,17 +1260,16 @@ const CreateTaskModal = ({ onClose, onTaskCreated }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-900 mb-2">Assign To User *</label>
+            <label className="block text-sm font-semibold text-slate-900 mb-2">Assign To User (Optional)</label>
             <select
               name="assigned_to_id"
               className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               value={formData.assigned_to_id}
               onChange={handleChange}
-              required
               disabled={usersLoading}
             >
               <option value="">
-                {usersLoading ? 'Loading users...' : 'Select a user'}
+                {usersLoading ? 'Loading users...' : 'Leave unassigned (optional)'}
               </option>
               {users.map(user => (
                 <option key={user.id} value={user.id}>
@@ -1210,7 +1277,7 @@ const CreateTaskModal = ({ onClose, onTaskCreated }) => {
                 </option>
               ))}
             </select>
-            <p className="text-xs text-slate-500 mt-1">Select a user from the authentication service</p>
+            <p className="text-xs text-slate-500 mt-1">Select a user to assign this task, or leave unassigned</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1232,6 +1299,7 @@ const CreateTaskModal = ({ onClose, onTaskCreated }) => {
                 className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 value={formData.due_date}
                 onChange={handleChange}
+                min={formData.start_date || undefined}
               />
             </div>
           </div>
@@ -1349,10 +1417,43 @@ const EditTaskModal = ({ task, currentUser, onClose, onTaskUpdated }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate dates
+    if (formData.start_date && formData.due_date) {
+      const startDate = new Date(formData.start_date);
+      const dueDate = new Date(formData.due_date);
+      if (dueDate <= startDate) {
+        alert('Due date must be after the start date.');
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
-      await taskAPI.updateTask(task.id, formData);
+      // If assigned_to_id changed, we need to include all assigned_to_* fields
+      let updateData = { ...formData };
+
+      if (formData.assigned_to_id !== task.assigned_to_id) {
+        const assignedUser = users.find(user => user.id == formData.assigned_to_id);
+        if (assignedUser) {
+          updateData = {
+            ...updateData,
+            assigned_to_username: assignedUser.username || '',
+            assigned_to_first_name: assignedUser.first_name || '',
+            assigned_to_last_name: assignedUser.last_name || '',
+            assigned_to_email: assignedUser.email || '',
+            assigned_to_role: assignedUser.role || '',
+            assigned_to_job_role: assignedUser.job_role || '',
+            assigned_to_tenant: assignedUser.tenant || '',
+            assigned_to_branch: assignedUser.branch || '',
+            assigned_to_status: assignedUser.status || '',
+            assigned_to_permission_levels: assignedUser.permission_levels || []
+          };
+        }
+      }
+
+      await taskAPI.updateTask(task.id, updateData);
       onTaskUpdated();
     } catch (error) {
       console.error('Error updating task:', error);
@@ -1362,10 +1463,26 @@ const EditTaskModal = ({ task, currentUser, onClose, onTaskUpdated }) => {
   };
 
   const handleChange = (e) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: value
     });
+
+    // Update due date min when start date changes
+    if (name === 'start_date' && value) {
+      const dueDateInput = document.querySelector('input[name="due_date"]');
+      if (dueDateInput) {
+        dueDateInput.min = value;
+        // If current due date is before new start date, clear it
+        if (formData.due_date && new Date(formData.due_date) <= new Date(value)) {
+          setFormData(prev => ({
+            ...prev,
+            due_date: ''
+          }));
+        }
+      }
+    }
   };
 
   return (
@@ -1412,17 +1529,16 @@ const EditTaskModal = ({ task, currentUser, onClose, onTaskUpdated }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-900 mb-2">Assign To User *</label>
+            <label className="block text-sm font-semibold text-slate-900 mb-2">Assign To User (Optional)</label>
             <select
               name="assigned_to_id"
               className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               value={formData.assigned_to_id}
               onChange={handleChange}
-              required
               disabled={usersLoading}
             >
               <option value="">
-                {usersLoading ? 'Loading users...' : 'Select a user'}
+                {usersLoading ? 'Loading users...' : 'Leave unassigned (optional)'}
               </option>
               {users.map(user => (
                 <option key={user.id} value={user.id}>
@@ -1430,7 +1546,7 @@ const EditTaskModal = ({ task, currentUser, onClose, onTaskUpdated }) => {
                 </option>
               ))}
             </select>
-            <p className="text-xs text-slate-500 mt-1">Select a user from the authentication service</p>
+            <p className="text-xs text-slate-500 mt-1">Select a user to assign this task, or leave unassigned</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1452,6 +1568,7 @@ const EditTaskModal = ({ task, currentUser, onClose, onTaskUpdated }) => {
                 className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 value={formData.due_date}
                 onChange={handleChange}
+                min={formData.start_date || undefined}
               />
             </div>
           </div>

@@ -55,16 +55,7 @@ const AdminDashboard = ({ user, onLogout }) => {
   const [userAnalytics, setUserAnalytics] = useState([]);
 
   // Confirmation modal state
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [confirmConfig, setConfirmConfig] = useState({
-    title: '',
-    message: '',
-    type: 'warning', // 'warning', 'danger', 'info'
-    confirmText: 'Confirm',
-    cancelText: 'Cancel',
-    onConfirm: () => {},
-    onCancel: () => {}
-  });
+  const [confirmModal, setConfirmModal] = useState(null);
 
   useEffect(() => {
     loadAdminData();
@@ -158,16 +149,15 @@ const AdminDashboard = ({ user, onLogout }) => {
 
   // Helper function to show confirmation modal
   const showConfirmation = (config) => {
-    setConfirmConfig({
+    setConfirmModal({
       title: config.title || 'Confirm Action',
       message: config.message || 'Are you sure you want to proceed?',
       type: config.type || 'warning',
       confirmText: config.confirmText || 'Confirm',
       cancelText: config.cancelText || 'Cancel',
       onConfirm: config.onConfirm || (() => {}),
-      onCancel: config.onCancel || (() => setShowConfirmModal(false))
+      onCancel: config.onCancel || (() => setConfirmModal(null))
     });
-    setShowConfirmModal(true);
   };
 
   const calculateUserAnalytics = (tasks, users) => {
@@ -466,32 +456,6 @@ const TaskManagementTab = ({ tasks, users, user, onUpdate, onShowConfirm }) => {
     }
   };
 
-  // Load all tasks (no filtering on server)
-  const loadTasks = async () => {
-    setLoading(true);
-    try {
-      const response = await taskAPI.getAllTasks();
-
-      // Handle paginated response - get all results
-      let allTasks = [];
-      if (response.data.results) {
-        allTasks = response.data.results;
-      } else {
-        allTasks = response.data;
-      }
-
-      setTasks(allTasks);
-      applyFilters(allTasks, filter, dateFilter, searchTerm, 1);
-    } catch (error) {
-      console.error('Error loading tasks:', error);
-      setTasks([]);
-      setPaginatedTasks([]);
-      setTotalItems(0);
-      setTotalPages(1);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Apply client-side filtering and pagination
   const applyFilters = (allTasks, statusFilter, dateFilterType, search, page = 1) => {
@@ -542,10 +506,6 @@ const TaskManagementTab = ({ tasks, users, user, onUpdate, onShowConfirm }) => {
     setCurrentPage(page);
   };
 
-  // Load tasks on mount
-  useEffect(() => {
-    loadTasks();
-  }, []);
 
   // Apply filters when they change
   useEffect(() => {
@@ -703,21 +663,7 @@ const TaskManagementTab = ({ tasks, users, user, onUpdate, onShowConfirm }) => {
                   key={task.id}
                   task={task}
                   users={users}
-                  onUpdate={() => {
-                    // Reload tasks after update
-                    const reloadTasks = async () => {
-                      try {
-                        const response = await taskAPI.getAllTasks();
-                        const tasksData = response.data.results || response.data || [];
-                        setTasks(tasksData);
-                        // Re-apply current filters
-                        applyFilters(tasksData, filter, dateFilter, searchTerm, currentPage);
-                      } catch (error) {
-                        console.error('Error reloading tasks:', error);
-                      }
-                    };
-                    reloadTasks();
-                  }}
+                  onUpdate={onUpdate}
                   onView={(task) => {
                     setTaskToView(task);
                     setShowDetailsModal(true);
@@ -844,8 +790,8 @@ const TaskTableRow = ({ task, users, onUpdate, onEdit, onReassign, onView, onSel
   };
 
   const handleDelete = () => {
-    const confirmed = window.confirm(`Are you sure you want to delete the task "${task.title}"? This action cannot be undone.`);
-    if (confirmed) {
+    setShowActions(false);
+    if (window.confirm(`Are you sure you want to delete the task "${task.title}"? This action cannot be undone.`)) {
       (async () => {
         try {
           await taskAPI.deleteTask(task.id);
@@ -985,6 +931,17 @@ const EditTaskModal = ({ task, users, user, onClose, onTaskUpdated }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate dates
+    if (formData.start_date && formData.due_date) {
+      const startDate = new Date(formData.start_date);
+      const dueDate = new Date(formData.due_date);
+      if (dueDate <= startDate) {
+        alert('Due date must be after the start date.');
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -999,10 +956,26 @@ const EditTaskModal = ({ task, users, user, onClose, onTaskUpdated }) => {
   };
 
   const handleChange = (e) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: value
     });
+
+    // Update due date min when start date changes
+    if (name === 'start_date' && value) {
+      const dueDateInput = document.querySelector('input[name="due_date"]');
+      if (dueDateInput) {
+        dueDateInput.min = value;
+        // If current due date is before new start date, clear it
+        if (formData.due_date && new Date(formData.due_date) <= new Date(value)) {
+          setFormData(prev => ({
+            ...prev,
+            due_date: ''
+          }));
+        }
+      }
+    }
   };
 
   return (
@@ -1096,6 +1069,7 @@ const EditTaskModal = ({ task, users, user, onClose, onTaskUpdated }) => {
                 className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 value={formData.due_date}
                 onChange={handleChange}
+                min={formData.start_date || undefined}
               />
             </div>
           </div>
@@ -1368,10 +1342,60 @@ useEffect(() => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate dates
+    if (formData.start_date && formData.due_date) {
+      const startDate = new Date(formData.start_date);
+      const dueDate = new Date(formData.due_date);
+      if (dueDate <= startDate) {
+        alert('Due date must be after the start date.');
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
-      await taskAPI.createTask(formData);
+      // Create task data without assignment first
+      const { assigned_to_id, ...createData } = formData;
+
+      // Create the task
+      const createResponse = await taskAPI.createTask(createData);
+      const newTask = createResponse.data;
+
+      // If assigned_to_id is set, update the task with assignment
+      if (assigned_to_id) {
+        const assignedUser = users.find(user => user.id == assigned_to_id);
+        if (assignedUser) {
+          const updateData = {
+            title: newTask.title,
+            assigned_to_id: assigned_to_id,
+            assigned_to_username: assignedUser.username || '',
+            assigned_to_first_name: assignedUser.first_name || '',
+            assigned_to_last_name: assignedUser.last_name || '',
+            assigned_to_email: assignedUser.email || '',
+            assigned_to_role: assignedUser.role || '',
+            assigned_to_job_role: assignedUser.job_role || '',
+            assigned_to_tenant: assignedUser.tenant || '',
+            assigned_to_branch: assignedUser.branch || '',
+            assigned_to_status: assignedUser.status || '',
+            assigned_to_permission_levels: assignedUser.permission_levels || [],
+            assigned_by_id: newTask.assigned_by_id,
+            assigned_by_first_name: newTask.assigned_by_first_name,
+            assigned_by_last_name: newTask.assigned_by_last_name,
+            assigned_by_email: newTask.assigned_by_email,
+            description: newTask.description,
+            start_date: newTask.start_date,
+            due_date: newTask.due_date,
+            priority: newTask.priority,
+            status: newTask.status,
+            progress_percentage: newTask.progress_percentage
+          };
+
+          await taskAPI.updateTask(newTask.id, updateData);
+        }
+      }
+
       onTaskCreated();
     } catch (error) {
       console.error('Error creating task:', error);
@@ -1474,6 +1498,7 @@ useEffect(() => {
                 className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 value={formData.due_date}
                 onChange={handleChange}
+                min={formData.start_date || undefined}
               />
             </div>
           </div>
@@ -1762,6 +1787,13 @@ const TaskDetailsModal = ({ task, users, onClose }) => {
           </button>
         </div>
       </div>
+
+      {confirmModal && (
+        <ConfirmModal
+          config={confirmModal}
+          onClose={() => setConfirmModal(null)}
+        />
+      )}
     </div>
   );
 };
@@ -2452,7 +2484,7 @@ const ConfirmModal = ({ config, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-blue-50">
           <div className="flex items-center gap-4">
