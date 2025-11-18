@@ -564,7 +564,7 @@ const TaskCard = ({ task, isSelected, onSelect }) => {
               <div className="flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5" />
                 <span>{new Date(task.due_date).toLocaleDateString()}</span>
-                {daysRemaining !== null && daysRemaining < 0 && (
+                {daysRemaining !== null && daysRemaining < 0 && task.status !== 'completed' && (
                   <span className="text-rose-600 font-medium">({Math.abs(daysRemaining)}d overdue)</span>
                 )}
               </div>
@@ -964,7 +964,7 @@ const DailyReportForm = ({ task, onClose, onReportAdded }) => {
       if (dueDateInput) {
         dueDateInput.min = value;
         // If current due date is before new start date, clear it
-        if (formData.due_date && new Date(formData.due_date) <= new Date(value)) {
+        if (formData.due_date && new Date(formData.due_date) < new Date(value)) {
           setFormData(prev => ({
             ...prev,
             due_date: ''
@@ -1159,7 +1159,7 @@ const CreateTaskModal = ({ onClose, onTaskCreated }) => {
     if (formData.start_date && formData.due_date) {
       const startDate = new Date(formData.start_date);
       const dueDate = new Date(formData.due_date);
-      if (dueDate <= startDate) {
+      if (dueDate < startDate) {
         alert('Due date must be after the start date.');
         return;
       }
@@ -1422,7 +1422,7 @@ const EditTaskModal = ({ task, currentUser, onClose, onTaskUpdated }) => {
     if (formData.start_date && formData.due_date) {
       const startDate = new Date(formData.start_date);
       const dueDate = new Date(formData.due_date);
-      if (dueDate <= startDate) {
+      if (dueDate < startDate) {
         alert('Due date must be after the start date.');
         return;
       }
@@ -1601,6 +1601,21 @@ const EditTaskModal = ({ task, currentUser, onClose, onTaskUpdated }) => {
                 <option value="blocked">Blocked</option>
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-900 mb-2">Progress Percentage</label>
+            <input
+              type="number"
+              name="progress_percentage"
+              min="0"
+              max="100"
+              className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={formData.progress_percentage}
+              onChange={handleChange}
+              placeholder="Enter progress percentage (0-100)"
+            />
+            <p className="text-xs text-slate-500 mt-1">Enter a value between 0 and 100</p>
           </div>
         </form>
 

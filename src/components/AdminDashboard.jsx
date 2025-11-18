@@ -936,7 +936,7 @@ const EditTaskModal = ({ task, users, user, onClose, onTaskUpdated }) => {
     if (formData.start_date && formData.due_date) {
       const startDate = new Date(formData.start_date);
       const dueDate = new Date(formData.due_date);
-      if (dueDate <= startDate) {
+      if (dueDate < startDate) {
         alert('Due date must be after the start date.');
         return;
       }
@@ -968,7 +968,7 @@ const EditTaskModal = ({ task, users, user, onClose, onTaskUpdated }) => {
       if (dueDateInput) {
         dueDateInput.min = value;
         // If current due date is before new start date, clear it
-        if (formData.due_date && new Date(formData.due_date) <= new Date(value)) {
+        if (formData.due_date && new Date(formData.due_date) < new Date(value)) {
           setFormData(prev => ({
             ...prev,
             due_date: ''
@@ -1347,7 +1347,7 @@ useEffect(() => {
     if (formData.start_date && formData.due_date) {
       const startDate = new Date(formData.start_date);
       const dueDate = new Date(formData.due_date);
-      if (dueDate <= startDate) {
+      if (dueDate < startDate) {
         alert('Due date must be after the start date.');
         return;
       }
@@ -1764,9 +1764,12 @@ const TaskDetailsModal = ({ task, users, onClose }) => {
                   {task.due_date && (
                     <div>
                       <label className="block text-sm font-medium text-slate-500 mb-1">Days Remaining</label>
-                      <span className={`text-sm font-medium ${Math.ceil((new Date(task.due_date) - new Date()) / (1000 * 60 * 60 * 24)) < 0 ? 'text-red-600' : 'text-slate-900'}`}>
+                      <span className={`text-sm font-medium ${Math.ceil((new Date(task.due_date) - new Date()) / (1000 * 60 * 60 * 24)) < 0 && task.status !== 'completed' ? 'text-red-600' : 'text-slate-900'}`}>
                         {(() => {
                           const days = Math.ceil((new Date(task.due_date) - new Date()) / (1000 * 60 * 60 * 24));
+                          if (task.status === 'completed') {
+                            return 'Completed';
+                          }
                           return `${days} day${days !== 1 ? 's' : ''}`;
                         })()}
                       </span>
