@@ -1790,13 +1790,6 @@ const TaskDetailsModal = ({ task, users, onClose }) => {
           </button>
         </div>
       </div>
-
-      {confirmModal && (
-        <ConfirmModal
-          config={confirmModal}
-          onClose={() => setConfirmModal(null)}
-        />
-      )}
     </div>
   );
 };
