@@ -248,7 +248,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                   {user.first_name[0]}{user.last_name[0]}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">{user.first_name} {user.last_name}</p>
+                  <p className="text-sm font-semibold text-slate-900">{user.username || `${user.first_name} ${user.last_name}`.trim()}</p>
                   <p className="text-xs text-slate-500">Administrator</p>
                 </div>
               </div>
