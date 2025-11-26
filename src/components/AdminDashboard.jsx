@@ -19,7 +19,8 @@
    CheckCircle,
    AlertCircle,
    Upload,
-   FileSpreadsheet
+   FileSpreadsheet,
+   BookOpen
  } from 'lucide-react';
  import * as XLSX from 'xlsx';
  import ReactQuill from 'react-quill';
@@ -37,7 +38,7 @@
    return tmp.textContent || tmp.innerText || '';
  };
 
-const AdminDashboard = ({ user, onLogout }) => {
+const AdminDashboard = ({ user, onLogout, onNavigateToKnowledgeBase }) => {
   const [activeTab, setActiveTab] = useState('tasks');
   const [tasks, setTasks] = useState([]);
   const [users, setUsers] = useState([]);
@@ -252,6 +253,14 @@ const AdminDashboard = ({ user, onLogout }) => {
                   <p className="text-xs text-slate-500">Administrator</p>
                 </div>
               </div>
+
+              <button
+                onClick={onNavigateToKnowledgeBase}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all duration-200 font-medium text-sm"
+              >
+                <BookOpen className="w-4 h-4" />
+                <span className="hidden sm:inline">Knowledge Base</span>
+              </button>
 
               <button
                 onClick={onLogout}

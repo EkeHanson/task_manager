@@ -163,7 +163,7 @@ function App() {
 
     // Task views (authenticated users only)
     if (user?.role === 'co-admin'|| user?.role === 'root-admin') {
-      return <AdminDashboard user={user} onLogout={handleLogout} />;
+      return <AdminDashboard user={user} onLogout={handleLogout} onNavigateToKnowledgeBase={() => setCurrentView('knowledge')} />;
     } else {
       return <Dashboard user={user} onLogout={handleLogout} />;
     }
