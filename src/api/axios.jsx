@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 // Use localhost for development, production URL for production
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:9090/api/project-manager/api';
+// const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:9090/api/project-manager/api';
+const API_BASE = 'https://server1.prolianceltd.com/api/project-manager/api';
 
 
 const instance = axios.create({
@@ -47,7 +48,7 @@ knowledgeBaseInstance.interceptors.response.use(
   response => response,
   error => {
     // Only redirect on 401 if we're not in the knowledge base context
-    if (error.response?.status === 401 && !error.config.url?.includes('/knowledge/')) {
+    if (error.response?.status === 401 && !error.config.url?.includes('/knowledge-base/')) {
       localStorage.removeItem('token');
       window.location.href = '/login';
     }

@@ -72,43 +72,43 @@ const estimateReadingTime = (text) => {
 };
 
 const KnowledgeBase = ({ user, onNavigateToLogin }) => {
-  const [activeTab, setActiveTab] = useState('browse'); // 'browse' or 'manage'
-  const [articles, setArticles] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [tags, setTags] = useState([]);
-  const [featuredArticles, setFeaturedArticles] = useState([]);
-  const [selectedArticle, setSelectedArticle] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedTags, setSelectedTags] = useState([]);
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
-  const [sortBy, setSortBy] = useState('published_at'); // 'published_at', 'title', 'view_count'
+   const [activeTab, setActiveTab] = useState('browse'); // 'browse' or 'manage'
+   const [articles, setArticles] = useState([]);
+   const [categories, setCategories] = useState([]);
+   const [tags, setTags] = useState([]);
+   const [featuredArticles, setFeaturedArticles] = useState([]);
+   const [selectedArticle, setSelectedArticle] = useState(null);
+   const [loading, setLoading] = useState(true);
+   const [searchTerm, setSearchTerm] = useState('');
+   const [selectedCategory, setSelectedCategory] = useState('');
+   const [selectedTags, setSelectedTags] = useState([]);
+   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
+   const [sortBy, setSortBy] = useState('published_at'); // 'published_at', 'title', 'view_count'
 
-  // Management state
-  const [showCreateArticle, setShowCreateArticle] = useState(false);
-  const [showCreateCategory, setShowCreateCategory] = useState(false);
-  const [showCreateTag, setShowCreateTag] = useState(false);
-  const [editingArticle, setEditingArticle] = useState(null);
-  const [editingCategory, setEditingCategory] = useState(null);
-  const [editingTag, setEditingTag] = useState(null);
-  const [stats, setStats] = useState({
-    totalArticles: 0,
-    publishedArticles: 0,
-    draftArticles: 0,
-    totalViews: 0,
-    totalCategories: 0,
-    totalTags: 0
-  });
+   // Management state
+   const [showCreateArticle, setShowCreateArticle] = useState(false);
+   const [showCreateCategory, setShowCreateCategory] = useState(false);
+   const [showCreateTag, setShowCreateTag] = useState(false);
+   const [editingArticle, setEditingArticle] = useState(null);
+   const [editingCategory, setEditingCategory] = useState(null);
+   const [editingTag, setEditingTag] = useState(null);
+   const [stats, setStats] = useState({
+     totalArticles: 0,
+     publishedArticles: 0,
+     draftArticles: 0,
+     totalViews: 0,
+     totalCategories: 0,
+     totalTags: 0
+   });
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
+   // Pagination state
+   const [currentPage, setCurrentPage] = useState(1);
+   const [totalPages, setTotalPages] = useState(1);
+   const [totalItems, setTotalItems] = useState(0);
 
-  useEffect(() => {
-    loadInitialData();
-  }, []);
+   useEffect(() => {
+     loadInitialData();
+   }, []);
 
   useEffect(() => {
     if (activeTab === 'browse') {
@@ -161,8 +161,10 @@ const KnowledgeBase = ({ user, onNavigateToLogin }) => {
 
   const loadManagementData = async () => {
     try {
+      // Use getArticles instead of getMyArticles to avoid authentication issues
+      // This will return all articles the authenticated user can manage
       const [articlesRes, categoriesRes, tagsRes] = await Promise.all([
-        user ? knowledgeBaseAPI.getMyArticles() : Promise.resolve({ data: [] }),
+        knowledgeBaseAPI.getArticles(),
         knowledgeBaseAPI.getCategories(),
         knowledgeBaseAPI.getTags()
       ]);
@@ -191,16 +193,20 @@ const KnowledgeBase = ({ user, onNavigateToLogin }) => {
   };
 
   const handleArticleClick = async (article) => {
-    setSelectedArticle(article);
-    // Increment view count
     try {
+      // Fetch full article details for viewing
+      const fullArticle = await knowledgeBaseAPI.getArticle(article.id);
+      setSelectedArticle(fullArticle.data);
+
+      // Increment view count
       await knowledgeBaseAPI.incrementArticleView(article.id);
+
       // Update local state
       setArticles(prev => prev.map(a =>
-        a.id === article.id ? { ...a, view_count: a.view_count + 1 } : a
+        a.id === article.id ? { ...a, view_count: (a.view_count || 0) + 1 } : a
       ));
     } catch (error) {
-      console.error('Error incrementing view count:', error);
+      console.error('Error loading article details:', error);
     }
   };
 
@@ -279,6 +285,28 @@ const KnowledgeBase = ({ user, onNavigateToLogin }) => {
       loadManagementData();
     } catch (error) {
       console.error('Error creating tag:', error);
+    }
+  };
+
+  const handleDeleteCategory = async (categoryId) => {
+    if (window.confirm('Are you sure you want to delete this category?')) {
+      try {
+        await knowledgeBaseAPI.deleteCategory(categoryId);
+        loadManagementData();
+      } catch (error) {
+        console.error('Error deleting category:', error);
+      }
+    }
+  };
+
+  const handleDeleteTag = async (tagId) => {
+    if (window.confirm('Are you sure you want to delete this tag?')) {
+      try {
+        await knowledgeBaseAPI.deleteTag(tagId);
+        loadManagementData();
+      } catch (error) {
+        console.error('Error deleting tag:', error);
+      }
     }
   };
 
@@ -647,7 +675,14 @@ const KnowledgeBase = ({ user, onNavigateToLogin }) => {
                             </div>
                             <div className="flex items-center gap-2">
                               <button
-                                onClick={() => setEditingArticle(article)}
+                                onClick={async () => {
+                                  try {
+                                    const fullArticle = await knowledgeBaseAPI.getArticle(article.id);
+                                    setEditingArticle(fullArticle.data);
+                                  } catch (error) {
+                                    console.error('Error loading article for editing:', error);
+                                  }
+                                }}
                                 className="p-2 text-slate-400 hover:text-emerald-600 transition-colors"
                               >
                                 <Edit className="w-4 h-4" />
@@ -687,12 +722,20 @@ const KnowledgeBase = ({ user, onNavigateToLogin }) => {
                       <div key={category.id} className="p-3 border-b border-slate-100 last:border-b-0">
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium text-slate-900">{category.name}</span>
-                          <button
-                            onClick={() => setEditingCategory(category)}
-                            className="p-1 text-slate-400 hover:text-slate-600 transition-colors"
-                          >
-                            <Edit className="w-3 h-3" />
-                          </button>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => setEditingCategory(category)}
+                              className="p-1 text-slate-400 hover:text-slate-600 transition-colors"
+                            >
+                              <Edit className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCategory(category.id)}
+                              className="p-1 text-slate-400 hover:text-red-600 transition-colors"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
                         </div>
                         {category.description && (
                           <p className="text-xs text-slate-500 mt-1">{category.description}</p>
@@ -720,10 +763,26 @@ const KnowledgeBase = ({ user, onNavigateToLogin }) => {
                       {tags.map(tag => (
                         <span
                           key={tag.id}
-                          className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-700 rounded-full text-xs"
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-700 rounded-full text-xs group"
                         >
                           <Hash className="w-3 h-3" />
                           {tag.name}
+                          <div className="ml-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => setEditingTag(tag)}
+                              className="p-0.5 hover:bg-slate-200 rounded"
+                              title="Edit tag"
+                            >
+                              <Edit className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTag(tag.id)}
+                              className="p-0.5 hover:bg-red-200 rounded"
+                              title="Delete tag"
+                            >
+                              <Trash2 className="w-3 h-3 text-red-600" />
+                            </button>
+                          </div>
                         </span>
                       ))}
                     </div>
@@ -785,10 +844,14 @@ const KnowledgeBase = ({ user, onNavigateToLogin }) => {
         <CategoryEditorModal
           category={editingCategory}
           onClose={() => setEditingCategory(null)}
-          onSave={(data) => {
-            // Handle category update
-            setEditingCategory(null);
-            loadManagementData();
+          onSave={async (data) => {
+            try {
+              await knowledgeBaseAPI.updateCategory(editingCategory.id, data);
+              setEditingCategory(null);
+              loadManagementData();
+            } catch (error) {
+              console.error('Error updating category:', error);
+            }
           }}
         />
       )}
@@ -797,6 +860,23 @@ const KnowledgeBase = ({ user, onNavigateToLogin }) => {
         <TagEditorModal
           onClose={() => setShowCreateTag(false)}
           onSave={handleCreateTag}
+        />
+      )}
+
+      {editingTag && (
+        <TagEditorModal
+          tag={editingTag}
+          onClose={() => setEditingTag(null)}
+          onSave={async (data) => {
+            try {
+              await knowledgeBaseAPI.updateTag(editingTag.id, data);
+              setEditingTag(null);
+              loadManagementData();
+            } catch (error) {
+              console.error('Error updating tag:', error);
+              // You could add user notification here
+            }
+          }}
         />
       )}
     </div>
@@ -1309,8 +1389,8 @@ const CategoryEditorModal = ({ category, onClose, onSave }) => {
 };
 
 // Tag Editor Modal Component
-const TagEditorModal = ({ onClose, onSave }) => {
-  const [tagName, setTagName] = useState('');
+const TagEditorModal = ({ tag, onClose, onSave }) => {
+  const [tagName, setTagName] = useState(tag?.name || '');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -1319,9 +1399,9 @@ const TagEditorModal = ({ onClose, onSave }) => {
 
     try {
       await onSave({ name: tagName.trim().toLowerCase() });
-      setTagName('');
+      if (!tag) setTagName(''); // Only reset for create
     } catch (error) {
-      console.error('Error creating tag:', error);
+      console.error('Error saving tag:', error);
     } finally {
       setLoading(false);
     }
@@ -1333,8 +1413,12 @@ const TagEditorModal = ({ onClose, onSave }) => {
         <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-emerald-50">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold text-slate-900">Create Tag</h2>
-              <p className="text-sm text-slate-500 mt-1">Add a new tag for categorizing articles</p>
+              <h2 className="text-xl font-bold text-slate-900">
+                {tag ? 'Edit Tag' : 'Create Tag'}
+              </h2>
+              <p className="text-sm text-slate-500 mt-1">
+                {tag ? 'Update tag details' : 'Add a new tag for categorizing articles'}
+              </p>
             </div>
             <button
               onClick={onClose}
@@ -1367,7 +1451,7 @@ const TagEditorModal = ({ onClose, onSave }) => {
             disabled={loading || !tagName.trim()}
             className="flex-1 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
           >
-            {loading ? 'Creating...' : 'Create Tag'}
+            {loading ? (tag ? 'Updating...' : 'Creating...') : (tag ? 'Update Tag' : 'Create Tag')}
           </button>
           <button
             type="button"

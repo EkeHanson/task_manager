@@ -162,7 +162,7 @@ function App() {
     }
 
     // Task views (authenticated users only)
-    if (user?.role === 'admin') {
+    if (user?.role === 'co-admin' || user?.role === 'root-admin' || user?.role === 'admin') {
       return <AdminDashboard user={user} onLogout={handleLogout} />;
     } else {
       return <Dashboard user={user} onLogout={handleLogout} />;

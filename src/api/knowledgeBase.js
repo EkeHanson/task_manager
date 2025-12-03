@@ -20,7 +20,7 @@ export const knowledgeBaseAPI = {
   },
   getPublishedArticles: (params = {}) => {
     const defaultParams = { page_size: 12, ...params };
-    return api.get('/articles/published/', { params: defaultParams });
+    return api.get('/articles/');
   },
   getMyArticles: () => api.get('/articles/my_articles/'),
   getFeaturedArticles: () => api.get('/articles/featured/'),
